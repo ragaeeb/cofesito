@@ -5,184 +5,176 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f7f5" />
     <meta name="color-scheme" content="light" />
-    <meta
-      name="description"
-      content="Create WinZip AES-256 encrypted ZIP archives entirely in your browser."
-    />
+    <meta name="description" content="Create AES-256 ZIP archives locally." />
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <title>Local AES-256 ZIP</title>
   </head>
   <body>
     <main class="shell">
-      <header class="hero">
-        <div class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Zero-upload utility</div>
-        <h1>Create an encrypted ZIP. Keep every byte local.</h1>
-        <p class="lede">
-          Files, filenames, passwords, and archives stay in this browser. Archives are written with
-          <strong>WinZip AES-256 (AE-2)</strong>, never ZipCrypto.
-        </p>
+      <header class="app-header">
+        <div class="brand">
+          <span class="status-dot" aria-hidden="true"></span>
+          <h1 id="app-name">cofesito</h1>
+        </div>
+        <span class="app-badge">AES-256</span>
       </header>
 
       <noscript>
-        <div class="notice error-notice">JavaScript is required. No data is sent to a server.</div>
+        <div class="notice error-notice">JavaScript is required.</div>
       </noscript>
 
-      <section class="card" aria-labelledby="files-heading">
-        <div class="section-heading">
-          <div>
-            <p class="step-label">01 · Files</p>
-            <h2 id="files-heading">Choose what to encrypt</h2>
+      <div class="primary-workflow">
+        <section class="card files-card" aria-labelledby="files-heading">
+          <div class="section-heading">
+            <h2 id="files-heading">Files</h2>
+            <div id="file-summary" class="summary-pill">0 files · 0 B</div>
           </div>
-          <div id="file-summary" class="summary-pill">0 files · 0 B</div>
-        </div>
 
-        <section id="drop-zone" class="drop-zone" aria-label="Drop files or folders here">
-          <div class="drop-icon" aria-hidden="true">↓</div>
-          <strong>Drop files or folders here</strong>
-          <span>or use one of the local pickers</span>
-          <div class="picker-row">
-            <button id="pick-files" class="button secondary" type="button">Choose files</button>
-            <button id="pick-folder" class="button secondary" type="button">Choose folder</button>
-          </div>
+          <section id="drop-zone" class="drop-zone" aria-label="Drop files or folders here">
+            <div class="drop-icon" aria-hidden="true">↓</div>
+            <strong>Drop files here</strong>
+            <span>or choose from your device</span>
+            <div class="picker-row">
+              <button id="pick-files" class="button secondary" type="button">Choose files</button>
+              <button id="pick-folder" class="button secondary" type="button">Choose folder</button>
+            </div>
+          </section>
+
+          <label for="file-input" class="sr-only">File picker input</label>
+          <input id="file-input" class="sr-only" type="file" multiple tabindex="-1" />
+          <label for="folder-input" class="sr-only">Folder picker input</label>
+          <input id="folder-input" class="sr-only" type="file" multiple webkitdirectory tabindex="-1" />
         </section>
 
-        <label for="file-input" class="sr-only">File picker input</label>
-        <input id="file-input" class="sr-only" type="file" multiple tabindex="-1" />
-        <label for="folder-input" class="sr-only">Folder picker input</label>
-        <input id="folder-input" class="sr-only" type="file" multiple webkitdirectory tabindex="-1" />
+        <section class="card controls-card">
+          <section class="control-section" aria-labelledby="security-heading">
+            <div class="section-heading">
+              <h2 id="security-heading">Password</h2>
+              <div class="encryption-badge">AES-256</div>
+            </div>
 
+            <div class="field-grid two-col">
+              <label class="field">
+                <span>Password</span>
+                <div class="input-action-group">
+                  <input
+                    id="password"
+                    type="password"
+                    autocomplete="new-password"
+                    spellcheck="false"
+                    autocapitalize="off"
+                  />
+                  <button
+                    id="toggle-password"
+                    class="input-button"
+                    type="button"
+                    aria-label="Show password"
+                    aria-controls="password password-confirm"
+                    aria-pressed="false"
+                  >Show</button>
+                </div>
+              </label>
+              <label class="field">
+                <span>Confirm password</span>
+                <input
+                  id="password-confirm"
+                  type="password"
+                  autocomplete="new-password"
+                  spellcheck="false"
+                  autocapitalize="off"
+                />
+              </label>
+            </div>
+
+            <div class="password-tools">
+              <button id="generate-password" class="text-button" type="button">Generate</button>
+              <button id="copy-password" class="text-button" type="button">Copy</button>
+            </div>
+
+            <div class="remember-row">
+              <label class="check-row">
+                <input id="remember-password" type="checkbox" />
+                <span>Remember on this device</span>
+              </label>
+              <button id="clear-remembered" class="text-button danger-text" type="button">Clear saved</button>
+            </div>
+          </section>
+
+          <section class="control-section archive-section" aria-labelledby="archive-heading">
+            <div class="section-heading">
+              <h2 id="archive-heading">Output</h2>
+            </div>
+
+            <div class="archive-row">
+              <label class="field archive-name-field">
+                <span>Filename</span>
+                <input id="archive-name" type="text" value="encrypted.zip" autocomplete="off" spellcheck="false" />
+              </label>
+              <button id="create-zip" class="button primary" type="button">Create ZIP</button>
+            </div>
+          </section>
+        </section>
+      </div>
+
+      <div class="secondary">
         <div id="file-list-wrap" class="file-list-wrap" hidden>
           <div class="list-header">
-            <span>Archive path</span>
+            <span>Selected files</span>
             <button id="clear-files" class="text-button" type="button">Clear files</button>
           </div>
           <ul id="file-list" class="file-list" aria-label="Selected files"></ul>
         </div>
-      </section>
 
-      <section class="card" aria-labelledby="security-heading">
-        <div class="section-heading">
-          <div>
-            <p class="step-label">02 · Security</p>
-            <h2 id="security-heading">Set the archive password</h2>
-          </div>
-          <div class="encryption-badge">AES-256 · AE-2</div>
-        </div>
+        <div class="status-panel">
+          <div id="error-box" class="notice error-notice" role="alert" hidden></div>
 
-        <div class="field-grid two-col">
-          <label class="field">
-            <span>Password</span>
-            <div class="input-action-group">
-              <input
-                id="password"
-                type="password"
-                autocomplete="new-password"
-                spellcheck="false"
-                autocapitalize="off"
-                aria-describedby="password-help"
-              />
-              <button
-                id="toggle-password"
-                class="input-button"
-                type="button"
-                aria-label="Show password"
-                aria-controls="password password-confirm"
-                aria-pressed="false"
-              >Show</button>
+          <div id="progress-panel" class="progress-panel" hidden>
+            <div class="progress-copy">
+              <span id="progress-label">Preparing…</span>
+              <span id="progress-percent">0%</span>
             </div>
-          </label>
-          <label class="field">
-            <span>Confirm password</span>
-            <input
-              id="password-confirm"
-              type="password"
-              autocomplete="new-password"
-              spellcheck="false"
-              autocapitalize="off"
-            />
-          </label>
-        </div>
+            <progress id="progress" max="100" value="0" aria-labelledby="progress-label progress-percent">0%</progress>
+            <button id="cancel" class="text-button danger-text" type="button" disabled aria-disabled="true">Cancel</button>
+          </div>
 
-        <div class="password-tools">
-          <button id="generate-password" class="text-button" type="button">Generate strong password</button>
-          <button id="copy-password" class="text-button" type="button">Copy password</button>
-        </div>
-
-        <p id="password-help" class="field-help">
-          Use a long, unique password. A password manager such as Bitwarden can generate and store one for you.
-        </p>
-
-        <div class="remember-panel">
-          <label class="check-row">
-            <input id="remember-password" type="checkbox" />
-            <span>Remember password on this device</span>
-          </label>
-          <button id="clear-remembered" class="text-button danger-text" type="button">Clear remembered password</button>
-          <p>
-            Convenience only: localStorage is readable by any JavaScript running on this origin. It is not encrypted,
-            not a password vault, and not equivalent to Bitwarden, Keychain, or another dedicated password manager.
-          </p>
-        </div>
-      </section>
-
-      <section class="card" aria-labelledby="archive-heading">
-        <div class="section-heading">
-          <div>
-            <p class="step-label">03 · Archive</p>
-            <h2 id="archive-heading">Create and download</h2>
+          <div id="success-panel" class="success-panel" role="status" aria-live="polite" aria-atomic="true" hidden>
+            <div>
+              <strong>ZIP ready</strong>
+              <span id="success-detail"></span>
+            </div>
+            <!-- biome-ignore lint/a11y/useValidAnchor: href is added only after a Blob exists. -->
+            <a id="download-again" class="button success-button" hidden>Download ZIP</a>
           </div>
         </div>
+      </div>
 
-        <label class="field archive-name-field">
-          <span>Archive filename</span>
-          <input id="archive-name" type="text" value="encrypted.zip" autocomplete="off" spellcheck="false" />
-        </label>
-
-        <div id="error-box" class="notice error-notice" role="alert" hidden></div>
-
-        <div id="progress-panel" class="progress-panel" hidden>
-          <div class="progress-copy">
-            <span id="progress-label">Preparing…</span>
-            <span id="progress-percent">0%</span>
-          </div>
-          <progress id="progress" max="100" value="0" aria-labelledby="progress-label progress-percent">0%</progress>
-          <button id="cancel" class="text-button danger-text" type="button" disabled aria-disabled="true">Cancel</button>
+      <section class="marketing-panel" aria-labelledby="marketing-heading">
+        <div class="marketing-intro">
+          <p class="marketing-kicker">Private by design</p>
+          <h2 id="marketing-heading">Secure ZIP creation, right in your browser.</h2>
+          <p>Files, filenames, passwords, and archives stay on this device. No account or upload is required.</p>
         </div>
-
-        <div class="create-row">
-          <button id="create-zip" class="button primary" type="button">Create encrypted ZIP</button>
-          <span class="create-note">AES-256 · local processing · no upload</span>
-        </div>
-
-        <div id="success-panel" class="success-panel" role="status" aria-live="polite" aria-atomic="true" hidden>
-          <div>
-            <strong>Encrypted ZIP created</strong>
-            <span id="success-detail">If the automatic download does not start, use the button below.</span>
-          </div>
-          <!-- biome-ignore lint/a11y/useValidAnchor: href is added only after a Blob exists. -->
-          <a id="download-again" class="button success-button" hidden>Download ZIP</a>
-        </div>
-      </section>
-
-      <aside class="privacy-strip" aria-label="Privacy and security summary">
-        <div>
+        <div class="marketing-point">
           <strong>Nothing is uploaded.</strong>
-          <span>All file reading, compression, AES-256 encryption, and download creation happen locally.</span>
+          <span>Reading, compression, encryption, and download creation happen locally.</span>
         </div>
-        <div>
+        <div class="marketing-point">
           <strong>No telemetry.</strong>
-          <span>No analytics, beacons, error-reporting SaaS, external fonts, or third-party runtime scripts.</span>
+          <span>No analytics, beacons, external fonts, or third-party runtime scripts.</span>
         </div>
-        <div>
+        <div class="marketing-point">
           <strong>Static by design.</strong>
-          <span>No APIs, accounts, databases, Workers, or server-side functions are required.</span>
+          <span>No APIs, accounts, databases, or server-side functions are required.</span>
         </div>
-      </aside>
+      </section>
 
-      <footer>
-        Your browser must still trust the JavaScript delivered by this site. Review the source and security model before
-        using it for sensitive data.
+      <footer class="app-footer">
+        <a id="github-link" href="./" target="_blank" rel="noreferrer">GitHub</a>
+        <span aria-hidden="true">·</span>
+        <span>by <a id="developer-link" href="./" target="_blank" rel="noreferrer">Developer</a></span>
+        <span aria-hidden="true">·</span>
+        <span id="app-version">v0.0.0</span>
       </footer>
     </main>
 

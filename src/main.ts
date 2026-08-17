@@ -1,4 +1,5 @@
 import './style.css';
+import packageMetadata from '../package.json';
 import { normalizeDownloadName, triggerDownload } from './download';
 import { isDragLeaveOutside } from './drag';
 import { filesFromDataTransfer, filesFromFileList, formatBytes, getTotalSize, mergeSelectedFiles } from './files';
@@ -27,6 +28,10 @@ function byId<T extends HTMLElement>(id: string): T {
     return element as T;
 }
 
+const appName = byId<HTMLHeadingElement>('app-name');
+const githubLink = byId<HTMLAnchorElement>('github-link');
+const developerLink = byId<HTMLAnchorElement>('developer-link');
+const appVersion = byId<HTMLSpanElement>('app-version');
 const dropZone = byId<HTMLDivElement>('drop-zone');
 const fileInput = byId<HTMLInputElement>('file-input');
 const folderInput = byId<HTMLInputElement>('folder-input');
@@ -54,6 +59,13 @@ const progressPercent = byId<HTMLSpanElement>('progress-percent');
 const successPanel = byId<HTMLDivElement>('success-panel');
 const successDetail = byId<HTMLSpanElement>('success-detail');
 const downloadAgain = byId<HTMLAnchorElement>('download-again');
+
+document.title = packageMetadata.name;
+appName.textContent = packageMetadata.name;
+githubLink.href = packageMetadata.homepage;
+developerLink.href = packageMetadata.author.url;
+developerLink.textContent = packageMetadata.author.name;
+appVersion.textContent = `v${packageMetadata.version}`;
 
 let selectedFiles: SelectedFile[] = [];
 let activeController: AbortController | null = null;
@@ -349,7 +361,7 @@ copyPasswordButton.addEventListener('click', async () => {
         copyPasswordButton.textContent = 'Copied';
         copyResetTimer = window.setTimeout(() => {
             copyResetTimer = null;
-            copyPasswordButton.textContent = 'Copy password';
+            copyPasswordButton.textContent = 'Copy';
         }, 1400);
     } catch {
         showError('The browser did not allow clipboard access. Use Show and copy the password manually.');
@@ -437,7 +449,7 @@ createButton.addEventListener('click', async () => {
         downloadAgain.href = activeObjectUrl;
         downloadAgain.download = filename;
         downloadAgain.hidden = false;
-        successDetail.textContent = `${filename} · ${formatBytes(archive.size)} · WinZip AES-256. If the automatic download does not start, use the button below.`;
+        successDetail.textContent = `${filename} · ${formatBytes(archive.size)}`;
         successPanel.hidden = false;
         triggerDownload(activeObjectUrl, filename);
     } catch (error) {
