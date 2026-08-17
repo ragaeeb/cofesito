@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Create WinZip AES-256 encrypted ZIP archives entirely in your browser."
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>Local AES-256 ZIP</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Zero-upload utility</div>
+        <h1>Create an encrypted ZIP. Keep every byte local.</h1>
+        <p class="lede">
+          Files, filenames, passwords, and archives stay in this browser. Archives are written with
+          <strong>WinZip AES-256 (AE-2)</strong>, never ZipCrypto.
+        </p>
+      </header>
+
+      <noscript>
+        <div class="notice error-notice">JavaScript is required. No data is sent to a server.</div>
+      </noscript>
+
+      <section class="card" aria-labelledby="files-heading">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">01 · Files</p>
+            <h2 id="files-heading">Choose what to encrypt</h2>
+          </div>
+          <div id="file-summary" class="summary-pill">0 files · 0 B</div>
+        </div>
+
+        <div id="drop-zone" class="drop-zone">
+          <div class="drop-icon" aria-hidden="true">↓</div>
+          <strong>Drop files or folders here</strong>
+          <span>or use one of the local pickers</span>
+          <div class="picker-row">
+            <button id="pick-files" class="button secondary" type="button">Choose files</button>
+            <button id="pick-folder" class="button secondary" type="button">Choose folder</button>
+          </div>
+        </div>
+
+        <input id="file-input" class="sr-only" type="file" multiple />
+        <input id="folder-input" class="sr-only" type="file" multiple webkitdirectory />
+
+        <div id="file-list-wrap" class="file-list-wrap" hidden>
+          <div class="list-header">
+            <span>Archive path</span>
+            <button id="clear-files" class="text-button" type="button">Clear files</button>
+          </div>
+          <ul id="file-list" class="file-list" aria-label="Selected files"></ul>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="security-heading">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">02 · Security</p>
+            <h2 id="security-heading">Set the archive password</h2>
+          </div>
+          <div class="encryption-badge">AES-256 · AE-2</div>
+        </div>
+
+        <div class="field-grid two-col">
+          <label class="field">
+            <span>Password</span>
+            <div class="input-action-group">
+              <input
+                id="password"
+                type="password"
+                autocomplete="new-password"
+                spellcheck="false"
+                autocapitalize="off"
+                aria-describedby="password-help"
+              />
+              <button id="toggle-password" class="input-button" type="button" aria-pressed="false">Show</button>
+            </div>
+          </label>
+          <label class="field">
+            <span>Confirm password</span>
+            <input
+              id="password-confirm"
+              type="password"
+              autocomplete="new-password"
+              spellcheck="false"
+              autocapitalize="off"
+            />
+          </label>
+        </div>
+
+        <div class="password-tools">
+          <button id="generate-password" class="text-button" type="button">Generate strong password</button>
+          <button id="copy-password" class="text-button" type="button">Copy password</button>
+        </div>
+
+        <p id="password-help" class="field-help">
+          Use a long, unique password. A password manager such as Bitwarden can generate and store one for you.
+        </p>
+
+        <div class="remember-panel">
+          <label class="check-row">
+            <input id="remember-password" type="checkbox" />
+            <span>Remember password on this device</span>
+          </label>
+          <button id="clear-remembered" class="text-button danger-text" type="button">Clear remembered password</button>
+          <p>
+            Convenience only: localStorage is readable by any JavaScript running on this origin. It is not encrypted,
+            not a password vault, and not equivalent to Bitwarden, Keychain, or another dedicated password manager.
+          </p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="archive-heading">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">03 · Archive</p>
+            <h2 id="archive-heading">Create and download</h2>
+          </div>
+        </div>
+
+        <label class="field archive-name-field">
+          <span>Archive filename</span>
+          <input id="archive-name" type="text" value="encrypted.zip" autocomplete="off" spellcheck="false" />
+        </label>
+
+        <div id="error-box" class="notice error-notice" role="alert" hidden></div>
+
+        <div id="progress-panel" class="progress-panel" hidden>
+          <div class="progress-copy">
+            <span id="progress-label">Preparing…</span>
+            <span id="progress-percent">0%</span>
+          </div>
+          <progress id="progress" max="100" value="0" aria-labelledby="progress-label progress-percent">0%</progress>
+          <button id="cancel" class="text-button danger-text" type="button">Cancel</button>
+        </div>
+
+        <div class="create-row">
+          <button id="create-zip" class="button primary" type="button">Create encrypted ZIP</button>
+          <span class="create-note">AES-256 · local processing · no upload</span>
+        </div>
+
+        <div id="success-panel" class="success-panel" role="status" hidden>
+          <div>
+            <strong>Encrypted ZIP created</strong>
+            <span id="success-detail"></span>
+          </div>
+          <a id="download-again" class="button success-button" href="#" download="encrypted.zip">Download ZIP</a>
+        </div>
+      </section>
+
+      <aside class="privacy-strip" aria-label="Privacy and security summary">
+        <div>
+          <strong>Nothing is uploaded.</strong>
+          <span>All file reading, compression, AES-256 encryption, and download creation happen locally.</span>
+        </div>
+        <div>
+          <strong>No telemetry.</strong>
+          <span>No analytics, beacons, error-reporting SaaS, external fonts, or third-party runtime scripts.</span>
+        </div>
+        <div>
+          <strong>Static by design.</strong>
+          <span>No APIs, accounts, databases, Workers, or server-side functions are required.</span>
+        </div>
+      </aside>
+
+      <footer>
+        Your browser must still trust the JavaScript delivered by this site. Review the source and security model before
+        using it for sensitive data.
+      </footer>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
