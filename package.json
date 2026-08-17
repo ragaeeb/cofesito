@@ -1,0 +1,49 @@
+{
+    "author": {
+        "name": "Ragaeeb Haq",
+        "url": "https://github.com/ragaeeb"
+    },
+    "bugs": {
+        "url": "https://github.com/ragaeeb/cofesito/issues"
+    },
+    "dependencies": {
+        "@zip.js/zip.js": "2.8.51",
+        "preact": "10.29.8"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.5.8",
+        "@testing-library/preact": "3.2.4",
+        "@types/bun": "1.3.14",
+        "happy-dom": "20.11.2",
+        "typescript": "7.0.2",
+        "vite": "8.2.1"
+    },
+    "engines": {
+        "bun": ">=1.3.14",
+        "node": ">=24"
+    },
+    "homepage": "https://github.com/ragaeeb/cofesito",
+    "license": "MIT",
+    "name": "cofesito",
+    "packageManager": "bun@1.3.14",
+    "private": true,
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ragaeeb/cofesito.git"
+    },
+    "scripts": {
+        "audit:dist": "bun scripts/audit-dist.mjs",
+        "build": "vite build",
+        "check": "bun run check:runtime && bun run typecheck && bun run lint && bun test && bun run build && bun run audit:dist",
+        "check:runtime": "bun scripts/check-runtime.mjs",
+        "deploy": "bun run build && surge dist cofesito.surge.sh",
+        "dev": "vite",
+        "format": "biome format --write . && biome lint --write .",
+        "lint": "biome check .",
+        "preview": "vite preview",
+        "test": "bun test",
+        "typecheck": "tsc --noEmit"
+    },
+    "type": "module",
+    "version": "1.0.0"
+}

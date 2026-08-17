@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.DS_Store
+public/.DS_Store
+dist/.DS_Store
+*.zip
+*.log
