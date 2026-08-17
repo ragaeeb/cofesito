@@ -373,9 +373,9 @@ createButton.addEventListener('click', async () => {
     try {
         const archive = await createEncryptedZip({
             files: selectedFiles,
+            onProgress: renderProgress,
             password: passwordInput.value,
             signal: controller.signal,
-            onProgress: renderProgress,
         });
 
         if (controller.signal.aborted) {
