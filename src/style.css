@@ -4,7 +4,7 @@
     color: #17201d;
     background: #f4f7f5;
     font-synthesis: none;
-    text-rendering: optimizeLegibility;
+    text-rendering: optimizelegibility;
     --ink: #17201d;
     --muted: #66716d;
     --line: #dce4df;
@@ -590,7 +590,7 @@ footer {
     padding: 0;
     margin: -1px;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
 }

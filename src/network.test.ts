@@ -10,6 +10,7 @@ const RUNTIME_FILES = [
     'src/types.ts',
     'src/zip.ts',
     'src/style.css',
+    'src/helpers/zip-format.ts',
     'public/_headers',
 ] as const;
 

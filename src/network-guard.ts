@@ -12,6 +12,7 @@ export type NetworkRuntime = {
     XMLHttpRequest?: AnyConstructor;
     WebSocket?: AnyConstructor;
     EventSource?: AnyConstructor;
+    RTCPeerConnection?: AnyConstructor;
     navigator?: RuntimeNavigator;
 };
 
@@ -67,6 +68,7 @@ export function installNoNetworkRuntimeGuard(
             ['XMLHttpRequest', blockedNetworkConstructor],
             ['WebSocket', blockedNetworkConstructor],
             ['EventSource', blockedNetworkConstructor],
+            ['RTCPeerConnection', blockedNetworkConstructor],
         ] as const) {
             if (name in runtime) {
                 const restore = replaceFunction(runtime, name, replacement);
@@ -85,14 +87,14 @@ export function installNoNetworkRuntimeGuard(
             restoreFunctions.push(restore);
         }
     } catch (error) {
-        for (const restore of restoreFunctions.reverse()) {
+        for (const restore of [...restoreFunctions].reverse()) {
             restore();
         }
         throw error;
     }
 
     return () => {
-        for (const restore of restoreFunctions.reverse()) {
+        for (const restore of [...restoreFunctions].reverse()) {
             restore();
         }
     };
