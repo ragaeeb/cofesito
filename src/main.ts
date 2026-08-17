@@ -1,4 +1,6 @@
 import './style.css';
+import { normalizeDownloadName, triggerDownload } from './download';
+import { isDragLeaveOutside } from './drag';
 import { filesFromDataTransfer, filesFromFileList, formatBytes, getTotalSize, mergeSelectedFiles } from './files';
 import { installNoNetworkRuntimeGuard } from './network-guard';
 import {
@@ -11,7 +13,9 @@ import {
 import type { SelectedFile, ZipProgress } from './types';
 import { createEncryptedZip } from './zip';
 
-if (import.meta.env.PROD) {
+// Production is always guarded. Dev can opt in for network-regression testing;
+// leaving it off preserves Vite's HMR connection during normal development.
+if (import.meta.env.PROD || import.meta.env.VITE_ENFORCE_NO_NETWORK === 'true') {
     installNoNetworkRuntimeGuard();
 }
 
@@ -55,6 +59,9 @@ let selectedFiles: SelectedFile[] = [];
 let activeController: AbortController | null = null;
 let activeObjectUrl: string | null = null;
 let passwordStorage: Storage | null = getPasswordStorage();
+let copyResetTimer: number | null = null;
+let pendingProgress: ZipProgress | null = null;
+let progressFrame: number | null = null;
 
 function getPasswordStorage(): Storage | null {
     try {
@@ -80,35 +87,24 @@ function revokeArchiveUrl(): void {
         activeObjectUrl = null;
     }
     downloadAgain.removeAttribute('href');
+    downloadAgain.removeAttribute('download');
+    downloadAgain.hidden = true;
+    successDetail.textContent = '';
     successPanel.hidden = true;
 }
 
 function setBusy(isBusy: boolean): void {
-    for (const element of [
-        pickFilesButton,
-        pickFolderButton,
-        fileInput,
-        folderInput,
-        clearFilesButton,
-        passwordInput,
-        confirmationInput,
-        togglePasswordButton,
-        generatePasswordButton,
-        copyPasswordButton,
-        rememberPasswordCheckbox,
-        clearRememberedButton,
-        archiveNameInput,
-        createButton,
-    ]) {
+    for (const element of document.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input')) {
+        if (element === cancelButton) {
+            continue;
+        }
         element.toggleAttribute('disabled', isBusy);
-    }
-
-    for (const button of fileList.querySelectorAll<HTMLButtonElement>('button[data-file-id]')) {
-        button.disabled = isBusy;
+        element.setAttribute('aria-disabled', String(isBusy));
     }
 
     dropZone.setAttribute('aria-busy', String(isBusy));
     cancelButton.disabled = !isBusy;
+    cancelButton.setAttribute('aria-disabled', String(!isBusy));
     progressPanel.hidden = !isBusy;
 }
 
@@ -152,6 +148,18 @@ function addFiles(files: readonly SelectedFile[]): void {
 }
 
 function updatePasswordPersistence(): void {
+    if (rememberPasswordCheckbox.checked && passwordInput.value.length === 0) {
+        rememberPasswordCheckbox.checked = false;
+        if (passwordStorage) {
+            try {
+                clearRememberedPassword(passwordStorage);
+            } catch {
+                passwordStorage = null;
+            }
+        }
+        return;
+    }
+
     if (!passwordStorage) {
         if (rememberPasswordCheckbox.checked) {
             rememberPasswordCheckbox.checked = false;
@@ -169,15 +177,7 @@ function updatePasswordPersistence(): void {
     }
 }
 
-function normalizeDownloadName(value: string): string {
-    const cleaned = value.trim().replaceAll('\\', '-').replaceAll('/', '-');
-    if (cleaned.length === 0 || cleaned === '.' || cleaned === '..') {
-        return 'encrypted.zip';
-    }
-    return cleaned.toLowerCase().endsWith('.zip') ? cleaned : `${cleaned}.zip`;
-}
-
-function renderProgress(progress: ZipProgress): void {
+function applyProgress(progress: ZipProgress): void {
     const roundedPercent = Math.max(0, Math.min(100, Math.round(progress.percent)));
     progressElement.value = roundedPercent;
     progressElement.textContent = `${roundedPercent}%`;
@@ -185,15 +185,24 @@ function renderProgress(progress: ZipProgress): void {
     progressLabel.textContent = `Encrypting ${progress.fileIndex}/${progress.fileCount}: ${progress.currentFile}`;
 }
 
-function triggerDownload(url: string, filename: string): void {
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.rel = 'noopener';
-    anchor.hidden = true;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
+function renderProgress(progress: ZipProgress): void {
+    pendingProgress = progress;
+    if (progressFrame !== null) {
+        return;
+    }
+    const flush = (): void => {
+        progressFrame = null;
+        const next = pendingProgress;
+        pendingProgress = null;
+        if (next) {
+            applyProgress(next);
+        }
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+        progressFrame = window.requestAnimationFrame(flush);
+    } else {
+        progressFrame = window.setTimeout(flush, 0);
+    }
 }
 
 function restoreRememberedPassword(): void {
@@ -228,7 +237,17 @@ dropZone.addEventListener('dragover', (event) => {
     }
 });
 
-dropZone.addEventListener('dragleave', () => {
+dropZone.addEventListener('dragenter', (event) => {
+    event.preventDefault();
+    if (!activeController) {
+        dropZone.classList.add('dragging');
+    }
+});
+
+dropZone.addEventListener('dragleave', (event) => {
+    if (!isDragLeaveOutside(event.relatedTarget, (target) => dropZone.contains(target as Node))) {
+        return;
+    }
     dropZone.classList.remove('dragging');
 });
 
@@ -243,6 +262,19 @@ dropZone.addEventListener('drop', async (event) => {
         addFiles(await filesFromDataTransfer(event.dataTransfer));
     } catch (error) {
         showError(error instanceof Error ? error.message : 'Could not read the dropped files.');
+    }
+});
+
+// A drop outside the designated target would otherwise navigate the page to the
+// dropped file and destroy the in-memory selection.
+document.addEventListener('dragover', (event) => {
+    if (!(event.target instanceof Node) || !dropZone.contains(event.target)) {
+        event.preventDefault();
+    }
+});
+document.addEventListener('drop', (event) => {
+    if (!(event.target instanceof Node) || !dropZone.contains(event.target)) {
+        event.preventDefault();
     }
 });
 
@@ -264,7 +296,11 @@ fileList.addEventListener('click', (event) => {
     if (activeController) {
         return;
     }
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-file-id]');
+    const target = event.target;
+    if (!(target instanceof Element)) {
+        return;
+    }
+    const button = target.closest<HTMLButtonElement>('button[data-file-id]');
     if (!button?.dataset.fileId) {
         return;
     }
@@ -285,6 +321,7 @@ togglePasswordButton.addEventListener('click', () => {
     passwordInput.type = type;
     confirmationInput.type = type;
     togglePasswordButton.textContent = reveal ? 'Hide' : 'Show';
+    togglePasswordButton.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
     togglePasswordButton.setAttribute('aria-pressed', String(reveal));
 });
 
@@ -306,8 +343,12 @@ copyPasswordButton.addEventListener('click', async () => {
 
     try {
         await navigator.clipboard.writeText(passwordInput.value);
+        if (copyResetTimer !== null) {
+            window.clearTimeout(copyResetTimer);
+        }
         copyPasswordButton.textContent = 'Copied';
-        window.setTimeout(() => {
+        copyResetTimer = window.setTimeout(() => {
+            copyResetTimer = null;
             copyPasswordButton.textContent = 'Copy password';
         }, 1400);
     } catch {
@@ -317,10 +358,20 @@ copyPasswordButton.addEventListener('click', async () => {
 
 rememberPasswordCheckbox.addEventListener('change', updatePasswordPersistence);
 passwordInput.addEventListener('input', () => {
-    if (rememberPasswordCheckbox.checked) {
-        updatePasswordPersistence();
-    }
+    revokeArchiveUrl();
 });
+passwordInput.addEventListener('change', updatePasswordPersistence);
+confirmationInput.addEventListener('input', revokeArchiveUrl);
+archiveNameInput.addEventListener('input', revokeArchiveUrl);
+
+for (const input of [passwordInput, confirmationInput, archiveNameInput]) {
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            createButton.click();
+        }
+    });
+}
 
 clearRememberedButton.addEventListener('click', () => {
     clearError();
@@ -385,11 +436,12 @@ createButton.addEventListener('click', async () => {
         activeObjectUrl = URL.createObjectURL(archive);
         downloadAgain.href = activeObjectUrl;
         downloadAgain.download = filename;
-        successDetail.textContent = `${filename} · ${formatBytes(archive.size)} · WinZip AES-256`;
+        downloadAgain.hidden = false;
+        successDetail.textContent = `${filename} · ${formatBytes(archive.size)} · WinZip AES-256. If the automatic download does not start, use the button below.`;
         successPanel.hidden = false;
         triggerDownload(activeObjectUrl, filename);
     } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
+        if (isAbortError(error)) {
             showError('Archive creation was cancelled. No output archive was kept.');
         } else {
             showError(error instanceof Error ? error.message : 'Could not create the encrypted archive.');
@@ -404,4 +456,7 @@ window.addEventListener('beforeunload', revokeArchiveUrl);
 
 restoreRememberedPassword();
 renderFiles();
-setBusy(false);
+
+function isAbortError(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
+}

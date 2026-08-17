@@ -1,6 +1,6 @@
-import { readFile, readdir, stat } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { extname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const rootPath = fileURLToPath(new URL('../dist/', import.meta.url));
 const forbiddenHtmlPatterns = [
@@ -17,6 +17,7 @@ const forbiddenJavaScriptPatterns = [
     /\.sendBeacon\s*\(/,
 ];
 
+/** @param {string} directory @returns {Promise<string[]>} */
 async function collectFiles(directory) {
     const entries = await readdir(directory);
     const output = [];
@@ -36,6 +37,13 @@ const html = await readFile(join(rootPath, 'index.html'), 'utf8');
 for (const pattern of forbiddenHtmlPatterns) {
     if (pattern.test(html)) {
         throw new Error(`Built index.html contains an external runtime asset: ${pattern}`);
+    }
+}
+
+const cspMeta = html.match(/<meta[^>]+http-equiv=["']Content-Security-Policy["'][^>]+>/i)?.[0] ?? '';
+for (const required of ["connect-src 'none'", "script-src 'self'", "style-src 'self'", "worker-src 'none'"]) {
+    if (!cspMeta.includes(required)) {
+        throw new Error(`Built index.html is missing the CSP meta directive: ${required}`);
     }
 }
 
@@ -61,6 +69,30 @@ if (headers.includes('unsafe-inline') || headers.includes('unsafe-eval')) {
 
 const builtFiles = await collectFiles(rootPath);
 const builtRelativePaths = builtFiles.map((file) => relative(rootPath, file));
+if (builtRelativePaths.some((file) => file.split('/').some((part) => part === '.DS_Store'))) {
+    throw new Error('Unexpected .DS_Store file found in dist.');
+}
+
+const referencedPaths = [...html.matchAll(/\b(?:src|href)=["']([^"']+)["']/gi)].flatMap((match) => {
+    const path = match[1];
+    if (!path?.startsWith('/') || path.startsWith('//')) {
+        return [];
+    }
+    return [path.split(/[?#]/, 1)[0]?.replace(/^\//, '') ?? ''];
+});
+for (const referencedPath of referencedPaths) {
+    if (!builtRelativePaths.includes(referencedPath)) {
+        throw new Error(`Built index.html references a missing asset: ${referencedPath}`);
+    }
+}
+
+const builtText = await Promise.all(builtFiles.map(async (file) => readFile(file, 'utf8').catch(() => '')));
+for (const file of builtFiles.filter((candidate) => relative(rootPath, candidate).startsWith('assets/'))) {
+    const filename = relative(rootPath, file).split('/').at(-1);
+    if (filename && !builtText.some((source) => source.includes(filename))) {
+        throw new Error(`Built asset is not referenced by another release file: ${relative(rootPath, file)}`);
+    }
+}
 if (builtRelativePaths.some((file) => file.startsWith('functions/'))) {
     throw new Error('Unexpected server-side functions directory found in dist.');
 }
@@ -84,6 +116,9 @@ for (const file of builtFiles.filter((candidate) => extname(candidate) === '.css
 
 for (const file of builtFiles.filter((candidate) => extname(candidate) === '.js')) {
     const source = await readFile(file, 'utf8');
+    if (!source.includes('Network access is disabled by this application.')) {
+        throw new Error(`Built JavaScript is missing the production network guard in ${relative(rootPath, file)}.`);
+    }
     for (const pattern of forbiddenJavaScriptPatterns) {
         if (pattern.test(source)) {
             throw new Error(

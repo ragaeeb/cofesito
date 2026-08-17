@@ -596,7 +596,8 @@ footer {
 }
 
 [hidden] {
-    display: none !important;
+    /* The hidden attribute appears after component display rules, so normal cascade wins. */
+    display: none;
 }
 
 @media (max-width: 700px) {
@@ -642,7 +643,10 @@ footer {
     *,
     *::before,
     *::after {
+        /* These accessibility overrides intentionally win over component transitions. */
+        /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override component styles. */
         scroll-behavior: auto !important;
+        /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override component styles. */
         transition: none !important;
     }
 }

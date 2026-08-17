@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { MemoryStorage } from '../tests/helpers/memory-storage';
+import { MemoryStorage } from './helpers/memory-storage';
 import {
     clearRememberedPassword,
     generateStrongPassword,
@@ -45,6 +45,14 @@ describe('remembered passwords', () => {
         expect(loadRememberedPassword(storage)).toBeNull();
     });
 
+    it('should never persist an empty password', () => {
+        const storage = new MemoryStorage();
+        storage.setItem(REMEMBERED_PASSWORD_KEY, 'previous');
+        updateRememberedPassword(storage, '', true);
+
+        expect(loadRememberedPassword(storage)).toBeNull();
+    });
+
     it('should clear an explicitly remembered password', () => {
         const storage = new MemoryStorage();
         storage.setItem(REMEMBERED_PASSWORD_KEY, 'secret');
@@ -81,5 +89,40 @@ describe('generated passwords', () => {
         } finally {
             Math.random = originalMathRandom;
         }
+    });
+
+    it.each([16, 28, 256])('should generate exactly the requested length (%s)', (length) => {
+        const source = {
+            getRandomValues<T extends ArrayBufferView | null>(array: T): T {
+                if (array instanceof Uint8Array) {
+                    array.fill(0);
+                }
+                return array;
+            },
+        };
+
+        expect(generateStrongPassword(length, source)).toHaveLength(length);
+    });
+
+    it.each([Number.NaN, 15, 257, 16.5, Number.POSITIVE_INFINITY])(
+        'should reject an invalid requested length (%s)',
+        (length) => {
+            expect(() => generateStrongPassword(length)).toThrow(RangeError);
+        },
+    );
+
+    it('should only emit characters from the documented alphabet', () => {
+        const source = {
+            getRandomValues<T extends ArrayBufferView | null>(array: T): T {
+                if (array instanceof Uint8Array) {
+                    array.forEach((_, index) => {
+                        array[index] = index;
+                    });
+                }
+                return array;
+            },
+        };
+        const password = generateStrongPassword(64, source);
+        expect(password).toMatch(/^[A-Za-z0-9!@#$%^&*_+=-]+$/);
     });
 });

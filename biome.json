@@ -19,6 +19,8 @@
             "src/**",
             "scripts/**",
             ".github/**",
+            "vite.config.ts",
+            "*.html",
             "*.json",
             "*.md",
             "!!**/node_modules",
@@ -99,10 +101,10 @@
             },
             "suspicious": {
                 "noAssignInExpressions": "off",
-                "noConsole": "off",
+                "noConsole": "error",
                 "noControlCharactersInRegex": "off",
                 "noExplicitAny": "error",
-                "noTemplateCurlyInString": "off"
+                "noTemplateCurlyInString": "error"
             }
         }
     },

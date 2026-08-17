@@ -1,6 +1,7 @@
 export const NETWORK_DISABLED_MESSAGE = 'Network access is disabled by this application.';
 
 type AnyFunction = (...args: never[]) => unknown;
+type AnyConstructor = new (...args: never[]) => unknown;
 
 type RuntimeNavigator = {
     sendBeacon?: AnyFunction;
@@ -8,9 +9,9 @@ type RuntimeNavigator = {
 
 export type NetworkRuntime = {
     fetch?: AnyFunction;
-    XMLHttpRequest?: unknown;
-    WebSocket?: unknown;
-    EventSource?: unknown;
+    XMLHttpRequest?: AnyConstructor;
+    WebSocket?: AnyConstructor;
+    EventSource?: AnyConstructor;
     navigator?: RuntimeNavigator;
 };
 
@@ -23,8 +24,8 @@ function replaceFunction(object: object, property: string, replacement: AnyFunct
     try {
         Object.defineProperty(object, property, {
             configurable: true,
-            writable: true,
             value: replacement,
+            writable: true,
         });
     } catch {
         return null;
@@ -60,25 +61,34 @@ export function installNoNetworkRuntimeGuard(
 ): Restore {
     const restoreFunctions: Restore[] = [];
 
-    for (const [name, replacement] of [
-        ['fetch', blockedFetch],
-        ['XMLHttpRequest', blockedNetworkConstructor],
-        ['WebSocket', blockedNetworkConstructor],
-        ['EventSource', blockedNetworkConstructor],
-    ] as const) {
-        if (name in runtime) {
-            const restore = replaceFunction(runtime, name, replacement);
-            if (restore) {
+    try {
+        for (const [name, replacement] of [
+            ['fetch', blockedFetch],
+            ['XMLHttpRequest', blockedNetworkConstructor],
+            ['WebSocket', blockedNetworkConstructor],
+            ['EventSource', blockedNetworkConstructor],
+        ] as const) {
+            if (name in runtime) {
+                const restore = replaceFunction(runtime, name, replacement);
+                if (!restore) {
+                    throw new Error(`Unable to disable network primitive: ${name}`);
+                }
                 restoreFunctions.push(restore);
             }
         }
-    }
 
-    if (runtime.navigator && 'sendBeacon' in runtime.navigator) {
-        const restore = replaceFunction(runtime.navigator, 'sendBeacon', blockedBeacon);
-        if (restore) {
+        if (runtime.navigator && 'sendBeacon' in runtime.navigator) {
+            const restore = replaceFunction(runtime.navigator, 'sendBeacon', blockedBeacon);
+            if (!restore) {
+                throw new Error('Unable to disable network primitive: navigator.sendBeacon');
+            }
             restoreFunctions.push(restore);
         }
+    } catch (error) {
+        for (const restore of restoreFunctions.reverse()) {
+            restore();
+        }
+        throw error;
     }
 
     return () => {

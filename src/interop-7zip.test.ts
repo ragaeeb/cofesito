@@ -35,8 +35,8 @@ it.skipIf(!sevenZip)('should be recognized and extracted by an independent 7-Zip
         });
         const [listExit, listStdout, listStderr] = await Promise.all([
             list.exited,
-            list.stdout.text(),
-            list.stderr.text(),
+            new Response(list.stdout).text(),
+            new Response(list.stderr).text(),
         ]);
         if (listExit !== 0) {
             throw new Error(`7-Zip could not inspect the generated archive: ${listStderr.trim()}`);
@@ -47,7 +47,7 @@ it.skipIf(!sevenZip)('should be recognized and extracted by an independent 7-Zip
             stderr: 'pipe',
             stdout: 'ignore',
         });
-        const [extractExit, extractStderr] = await Promise.all([extract.exited, extract.stderr.text()]);
+        const [extractExit, extractStderr] = await Promise.all([extract.exited, new Response(extract.stderr).text()]);
         if (extractExit !== 0) {
             throw new Error(`7-Zip could not extract the generated archive: ${extractStderr.trim()}`);
         }
