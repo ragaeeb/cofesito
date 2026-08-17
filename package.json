@@ -7,17 +7,20 @@
         "url": "https://github.com/ragaeeb/cofesito/issues"
     },
     "dependencies": {
-        "@zip.js/zip.js": "2.8.51"
+        "@zip.js/zip.js": "2.8.51",
+        "preact": "10.29.8"
     },
     "devDependencies": {
         "@biomejs/biome": "2.5.8",
+        "@testing-library/preact": "3.2.4",
         "@types/bun": "1.3.14",
+        "happy-dom": "20.11.2",
         "typescript": "7.0.2",
         "vite": "8.2.1"
     },
     "engines": {
         "bun": ">=1.3.14",
-        "node": "^20.19.0 || >=22.12.0"
+        "node": ">=24"
     },
     "homepage": "https://github.com/ragaeeb/cofesito",
     "license": "MIT",
@@ -29,10 +32,11 @@
         "url": "git+https://github.com/ragaeeb/cofesito.git"
     },
     "scripts": {
-        "audit:dist": "node scripts/audit-dist.mjs",
+        "audit:dist": "bun scripts/audit-dist.mjs",
         "build": "vite build",
         "check": "bun run check:runtime && bun run typecheck && bun run lint && bun test && bun run build && bun run audit:dist",
         "check:runtime": "bun scripts/check-runtime.mjs",
+        "deploy": "bun run build && surge dist cofesito.surge.sh",
         "dev": "vite",
         "format": "biome format --write . && biome lint --write .",
         "lint": "biome check .",

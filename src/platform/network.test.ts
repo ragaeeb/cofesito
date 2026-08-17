@@ -3,14 +3,22 @@ import { installNoNetworkRuntimeGuard, NETWORK_DISABLED_MESSAGE, type NetworkRun
 
 const RUNTIME_FILES = [
     'index.html',
-    'src/main.ts',
-    'src/network-guard.ts',
-    'src/files.ts',
-    'src/password.ts',
-    'src/types.ts',
-    'src/zip.ts',
+    'src/main.tsx',
+    'src/app/App.tsx',
+    'src/app/app-state.ts',
+    'src/app/app-runtime.ts',
+    'src/app/use-archive-controller.ts',
+    'src/app/components/ArchivePanel.tsx',
+    'src/app/components/FilePicker.tsx',
+    'src/app/components/PasswordPanel.tsx',
+    'src/archive/download.ts',
+    'src/archive/files.ts',
+    'src/archive/password.ts',
+    'src/archive/types.ts',
+    'src/archive/zip.ts',
+    'src/platform/network-guard.ts',
     'src/style.css',
-    'src/helpers/zip-format.ts',
+    'src/test/zip-format.ts',
     'public/_headers',
 ] as const;
 
@@ -65,7 +73,7 @@ describe('zero-upload runtime behavior', () => {
     });
 
     it('should expose a development opt-in for exercising the production guard', async () => {
-        const source = await Bun.file('src/main.ts').text();
+        const source = await Bun.file('src/main.tsx').text();
         expect(source).toContain("import.meta.env.VITE_ENFORCE_NO_NETWORK === 'true'");
         expect(source).toContain('installNoNetworkRuntimeGuard()');
     });

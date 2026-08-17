@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { MemoryStorage } from './helpers/memory-storage';
+import { MemoryStorage } from '../test/memory-storage';
 import {
     clearRememberedPassword,
     generateStrongPassword,

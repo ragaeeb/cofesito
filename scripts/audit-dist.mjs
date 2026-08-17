@@ -2,7 +2,8 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const rootPath = fileURLToPath(new URL('../dist/', import.meta.url));
+const projectRoot = fileURLToPath(new URL('../', import.meta.url));
+const rootPath = join(projectRoot, 'dist');
 const forbiddenHtmlPatterns = [
     /<script(?![^>]*\bsrc=)[^>]*>/i,
     /<script[^>]+src=["']https?:\/\//i,
@@ -16,6 +17,45 @@ const forbiddenJavaScriptPatterns = [
     /new\s+EventSource\b/,
     /\.sendBeacon\s*\(/,
 ];
+const runtimeSourcePaths = [
+    'index.html',
+    'src/main.tsx',
+    'src/app/App.tsx',
+    'src/app/app-state.ts',
+    'src/app/app-runtime.ts',
+    'src/app/use-archive-controller.ts',
+    'src/app/components/ArchivePanel.tsx',
+    'src/app/components/FilePicker.tsx',
+    'src/app/components/PasswordPanel.tsx',
+    'src/archive/download.ts',
+    'src/archive/files.ts',
+    'src/archive/password.ts',
+    'src/style.css',
+    'src/archive/types.ts',
+    'src/archive/zip.ts',
+    'src/platform/network-guard.ts',
+    'src/test/zip-format.ts',
+    'public/_headers',
+];
+const forbiddenRuntimePatterns = [
+    /https?:\/\//i,
+    ...forbiddenJavaScriptPatterns,
+    /\bindexedDB\b/,
+    /location\.(search|hash)/,
+    /history\.(pushState|replaceState)/,
+    /\bconsole\.(log|info|warn|error|debug)\s*\(/,
+];
+
+for (const relativePath of runtimeSourcePaths) {
+    const source = await readFile(join(projectRoot, relativePath), 'utf8');
+    for (const pattern of forbiddenRuntimePatterns) {
+        if (pattern.test(source)) {
+            throw new Error(
+                `Runtime source contains a forbidden network or navigation pattern in ${relativePath}: ${pattern}`,
+            );
+        }
+    }
+}
 
 /** @param {string} directory @returns {Promise<string[]>} */
 async function collectFiles(directory) {

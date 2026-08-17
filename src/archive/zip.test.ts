@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { BlobReader, TextWriter, ZipReader } from '@zip.js/zip.js/lib/zip-core-native.js';
-import type { SelectedFile } from '../src/types';
+import type { ParsedZipEntry } from '../test/zip-format';
+import { assertWinZipAes256Ae2, parseCentralEntries, parseFirstLocalEntry } from '../test/zip-format';
+import type { SelectedFile } from './types';
 import {
     AES_256_STRENGTH,
     createEncryptedZip,
@@ -9,9 +11,7 @@ import {
     ZIP_COMPRESSION_STREAM_ENABLED,
     ZIP_CRYPTO_ENABLED,
     ZIP_WORKERS_ENABLED,
-} from '../src/zip';
-import type { ParsedZipEntry } from './helpers/zip-format';
-import { assertWinZipAes256Ae2, parseCentralEntries, parseFirstLocalEntry } from './helpers/zip-format';
+} from './zip';
 
 function fixtureFiles(): SelectedFile[] {
     const now = Date.now();

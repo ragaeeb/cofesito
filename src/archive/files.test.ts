@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import {
-    filesFromDataTransfer,
-    formatBytes,
-    getTotalSize,
-    mergeSelectedFiles,
-    normalizeArchivePath,
-} from '../src/files';
-import type { SelectedFile } from '../src/types';
+import { filesFromDataTransfer, formatBytes, getTotalSize, mergeSelectedFiles, normalizeArchivePath } from './files';
+import type { SelectedFile } from './types';
 
 function selected(path: string, id: string): SelectedFile {
     const file = new File([`fixture contents for ${id}`], path.split('/').at(-1) ?? id);
